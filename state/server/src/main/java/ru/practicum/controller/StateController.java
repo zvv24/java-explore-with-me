@@ -1,8 +1,8 @@
 package ru.practicum.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.dto.EndpointHitDto;
 import ru.practicum.dto.ViewStats;
@@ -13,12 +13,13 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
+@Validated
 public class StateController {
-    @Autowired
-    private StateService stateService;
+    private final StateService stateService;
     private static final String timeFormat = "yyyy-MM-dd HH:mm:ss";
 
     @PostMapping("/hit")
+    @Validated
     public EndpointHitDto hit(@RequestBody EndpointHitDto endpointHitDto) {
         return stateService.hit(endpointHitDto);
     }

@@ -1,7 +1,6 @@
 package ru.practicum.service;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.practicum.dto.EndpointHitDto;
 import ru.practicum.dto.ViewStats;
@@ -15,10 +14,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class StateServiceImpl implements StateService {
-    @Autowired
-    private StateServerRepository stateServerRepository;
-    @Autowired
-    private StateMapper stateMapper;
+    private final StateServerRepository stateServerRepository;
+    private final StateMapper stateMapper;
 
     @Override
     public EndpointHitDto hit(EndpointHitDto endpointHitDto) {
