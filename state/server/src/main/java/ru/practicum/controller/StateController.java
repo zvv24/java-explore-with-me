@@ -2,6 +2,7 @@ package ru.practicum.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.dto.EndpointHitDto;
@@ -19,6 +20,7 @@ public class StateController {
     private static final String timeFormat = "yyyy-MM-dd HH:mm:ss";
 
     @PostMapping("/hit")
+    @ResponseStatus(HttpStatus.CREATED)
     @Validated
     public EndpointHitDto hit(@RequestBody EndpointHitDto endpointHitDto) {
         return stateService.hit(endpointHitDto);

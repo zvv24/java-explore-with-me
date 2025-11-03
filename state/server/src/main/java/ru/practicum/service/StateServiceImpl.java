@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.practicum.dto.EndpointHitDto;
 import ru.practicum.dto.ViewStats;
+import ru.practicum.exception.ValidationException;
 import ru.practicum.mapper.StateMapper;
 import ru.practicum.model.EndpointHit;
 import ru.practicum.repository.StateServerRepository;
@@ -26,6 +27,10 @@ public class StateServiceImpl implements StateService {
 
     @Override
     public List<ViewStats> stats(LocalDateTime start, LocalDateTime end, List<String> uris, boolean unique) {
+        if (start != null && end != null && start.isAfter(end)) {
+            throw new ValidationException("Дата начала не может быть позже даты окончания");
+        }
+
         if (unique) {
             return stateServerRepository.findUniqueStats(start, end, uris);
         } else {

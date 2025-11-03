@@ -1,0 +1,52 @@
+package ru.practicum.compilation.mapper;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+import ru.practicum.compilation.dto.CompilationDto;
+import ru.practicum.compilation.dto.NewCompilationDto;
+import ru.practicum.compilation.dto.UpdateCompilationRequest;
+import ru.practicum.compilation.model.Compilation;
+import ru.practicum.event.dto.EventShortDto;
+import ru.practicum.event.mapper.EventMapper;
+
+import java.util.Collections;
+import java.util.List;
+
+@Component
+@RequiredArgsConstructor
+public class CompilationMapper {
+    private final EventMapper eventMapper;
+
+    public Compilation toEntity(NewCompilationDto newCompilationDto) {
+        return Compilation.builder()
+                .title(newCompilationDto.getTitle())
+                .pinned(newCompilationDto.getPinned() != null ? newCompilationDto.getPinned() : false)
+                .events(Collections.emptyList())
+                .build();
+    }
+
+    public CompilationDto toDto(Compilation compilation) {
+        CompilationDto dto = new CompilationDto();
+        dto.setId(compilation.getId());
+        dto.setTitle(compilation.getTitle());
+        dto.setPinned(compilation.getPinned());
+
+        if (compilation.getEvents() != null && !compilation.getEvents().isEmpty()) {
+            List<EventShortDto> eventDtos = compilation.getEvents().stream()
+                    .map(eventMapper::toShortDto)
+                    .toList();
+            dto.setEvents(eventDtos);
+        }
+
+        return dto;
+    }
+
+    public void updateCompilationFromRequest(UpdateCompilationRequest request, Compilation compilation) {
+        if (request.getTitle() != null) {
+            compilation.setTitle(request.getTitle());
+        }
+        if (request.getPinned() != null) {
+            compilation.setPinned(request.getPinned());
+        }
+    }
+}
