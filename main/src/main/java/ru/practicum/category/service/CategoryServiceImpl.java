@@ -66,7 +66,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public void deleteCategory(Long categoryId) {
-        if (!categoryRepository.existsEventsByCategoryId(categoryId)) {
+        if (categoryRepository.existsEventsByCategoryId(categoryId)) {
             throw new ConflictException("В категории присутствуют события");
         }
 

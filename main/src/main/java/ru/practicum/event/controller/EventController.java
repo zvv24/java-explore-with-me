@@ -1,10 +1,12 @@
 package ru.practicum.event.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import ru.practicum.client.StateClient;
 import ru.practicum.event.dto.*;
 import ru.practicum.event.model.EventState;
 import ru.practicum.event.service.EventService;
@@ -16,6 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EventController {
     private final EventService eventService;
+    private final StateClient stateClient;
 
     @PostMapping("/users/{userId}/events")
     @ResponseStatus(HttpStatus.CREATED)
@@ -72,12 +75,17 @@ public class EventController {
             @RequestParam(defaultValue = "false") Boolean onlyAvailable,
             @RequestParam(required = false) String sort,
             @RequestParam(defaultValue = "0") Integer from,
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(defaultValue = "10") Integer size,
+            HttpServletRequest request) {
+
+        stateClient.hit(request);
         return eventService.getPublicEvents(text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size);
     }
 
     @GetMapping("/events/{id}")
-    public EventFullDto getPublicEvent(@PathVariable("id") Long eventId) {
+    public EventFullDto getPublicEvent(@PathVariable("id") Long eventId,
+                                       HttpServletRequest request) {
+        stateClient.hit(request);
         return eventService.getPublicEvent(eventId);
     }
 }

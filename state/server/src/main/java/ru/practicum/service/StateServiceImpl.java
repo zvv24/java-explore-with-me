@@ -32,9 +32,17 @@ public class StateServiceImpl implements StateService {
         }
 
         if (unique) {
-            return stateServerRepository.findUniqueStats(start, end, uris);
+            if (uris != null && !uris.isEmpty()) {
+                return stateServerRepository.findUniqueStatsWithUris(start, end, uris);
+            } else {
+                return stateServerRepository.findUniqueStatsWithoutUris(start, end);
+            }
         } else {
-            return stateServerRepository.findStats(start, end, uris);
+            if (uris != null && !uris.isEmpty()) {
+                return stateServerRepository.findStatsWithUris(start, end, uris);
+            } else {
+                return stateServerRepository.findStatsWithoutUris(start, end);
+            }
         }
     }
 }

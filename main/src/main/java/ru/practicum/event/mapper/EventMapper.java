@@ -18,21 +18,21 @@ public class EventMapper {
     private final UserMapper userMapper;
 
     public Event toEntity(NewEventDto newEventDto) {
-        return Event.builder()
-                .annotation(newEventDto.getAnnotation())
-                .description(newEventDto.getDescription())
-                .eventDate(newEventDto.getEventDate())
-                .lat(newEventDto.getLocation().getLat())
-                .lon(newEventDto.getLocation().getLon())
-                .paid(newEventDto.getPaid())
-                .participantLimit(newEventDto.getParticipantLimit())
-                .requestModeration(newEventDto.getRequestModeration())
-                .title(newEventDto.getTitle())
-                .createdOn(LocalDateTime.now())
-                .state(EventState.PENDING)
-                .confirmedRequests(0L)
-                .views(0L)
-                .build();
+        Event event = new Event();
+        event.setAnnotation(newEventDto.getAnnotation());
+        event.setDescription(newEventDto.getDescription());
+        event.setEventDate(newEventDto.getEventDate());
+        event.setLat(newEventDto.getLocation().getLat());
+        event.setLon(newEventDto.getLocation().getLon());
+        event.setPaid(newEventDto.getPaid());
+        event.setParticipantLimit(newEventDto.getParticipantLimit());
+        event.setRequestModeration(newEventDto.getRequestModeration());
+        event.setTitle(newEventDto.getTitle());
+        event.setCreatedOn(LocalDateTime.now());
+        event.setState(EventState.PENDING);
+        event.setConfirmedRequests(0L);
+        event.setViews(0L);
+        return event;
     }
 
     public EventFullDto toFullDto(Event event) {

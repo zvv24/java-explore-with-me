@@ -1,7 +1,6 @@
 package ru.practicum.event.model;
 
 import jakarta.persistence.*;
-import lombok.Builder;
 import lombok.Data;
 import ru.practicum.category.model.Category;
 import ru.practicum.user.model.User;
@@ -11,7 +10,6 @@ import java.time.LocalDateTime;
 @Data
 @Entity
 @Table(name = "events")
-@Builder
 public class Event {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

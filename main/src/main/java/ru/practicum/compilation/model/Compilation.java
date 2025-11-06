@@ -1,7 +1,6 @@
 package ru.practicum.compilation.model;
 
 import jakarta.persistence.*;
-import lombok.Builder;
 import lombok.Data;
 import ru.practicum.event.model.Event;
 
@@ -10,7 +9,6 @@ import java.util.List;
 @Data
 @Entity
 @Table(name = "compilations")
-@Builder
 public class Compilation {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

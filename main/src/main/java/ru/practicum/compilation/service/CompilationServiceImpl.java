@@ -46,7 +46,7 @@ public class CompilationServiceImpl implements CompilationService {
 
     @Override
     public CompilationDto updateCompilation(Long compId, UpdateCompilationRequest updateRequest) {
-        Compilation compilation = compilationRepository.findById(compId)
+        Compilation compilation = compilationRepository.findByIdWithEvents(compId)
                 .orElseThrow(() -> new NotFoundException("Подборка с id " + compId + " не найдена"));
         if (updateRequest.getTitle() != null &&
                 !compilation.getTitle().equals(updateRequest.getTitle()) &&

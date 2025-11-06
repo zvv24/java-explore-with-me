@@ -22,11 +22,11 @@ public class RequestMapper {
     }
 
     public Request toNewEntity(Event event, User requester) {
-        return Request.builder()
-                .created(LocalDateTime.now())
-                .event(event)
-                .requester(requester)
-                .status(RequestStatus.PENDING)
-                .build();
+        Request request = new Request();
+        request.setCreated(LocalDateTime.now());
+        request.setEvent(event);
+        request.setRequester(requester);
+        request.setStatus(RequestStatus.PENDING);
+        return request;
     }
 }

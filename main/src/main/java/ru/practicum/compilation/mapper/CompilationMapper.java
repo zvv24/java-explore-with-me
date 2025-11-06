@@ -9,6 +9,7 @@ import ru.practicum.compilation.model.Compilation;
 import ru.practicum.event.dto.EventShortDto;
 import ru.practicum.event.mapper.EventMapper;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -18,11 +19,11 @@ public class CompilationMapper {
     private final EventMapper eventMapper;
 
     public Compilation toEntity(NewCompilationDto newCompilationDto) {
-        return Compilation.builder()
-                .title(newCompilationDto.getTitle())
-                .pinned(newCompilationDto.getPinned() != null ? newCompilationDto.getPinned() : false)
-                .events(Collections.emptyList())
-                .build();
+        Compilation compilation = new Compilation();
+        compilation.setTitle(newCompilationDto.getTitle());
+        compilation.setPinned(newCompilationDto.getPinned() != null ? newCompilationDto.getPinned() : false);
+        compilation.setEvents(Collections.emptyList());
+        return compilation;
     }
 
     public CompilationDto toDto(Compilation compilation) {
@@ -36,6 +37,8 @@ public class CompilationMapper {
                     .map(eventMapper::toShortDto)
                     .toList();
             dto.setEvents(eventDtos);
+        } else {
+            dto.setEvents(new ArrayList<>());
         }
 
         return dto;

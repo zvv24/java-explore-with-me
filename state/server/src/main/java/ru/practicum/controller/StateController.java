@@ -1,5 +1,6 @@
 package ru.practicum.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -22,15 +23,16 @@ public class StateController {
     @PostMapping("/hit")
     @ResponseStatus(HttpStatus.CREATED)
     @Validated
-    public EndpointHitDto hit(@RequestBody EndpointHitDto endpointHitDto) {
+    public EndpointHitDto hit(@RequestBody @Valid EndpointHitDto endpointHitDto) {
         return stateService.hit(endpointHitDto);
     }
 
     @GetMapping("/stats")
+    @ResponseStatus(HttpStatus.OK)
     public List<ViewStats> stats(
             @RequestParam @DateTimeFormat(pattern = timeFormat) LocalDateTime start,
             @RequestParam @DateTimeFormat(pattern = timeFormat) LocalDateTime end,
-            @RequestParam(required = false) List<String> uris,
+            @RequestParam(required = false, defaultValue = "") List<String> uris,
             @RequestParam(defaultValue = "false") boolean unique) {
         return stateService.stats(start, end, uris, unique);
     }

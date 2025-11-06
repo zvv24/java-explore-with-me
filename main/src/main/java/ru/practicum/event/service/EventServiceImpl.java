@@ -7,6 +7,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import ru.practicum.category.model.Category;
 import ru.practicum.category.repository.CategoryRepository;
+import ru.practicum.client.StateClient;
 import ru.practicum.event.dto.*;
 import ru.practicum.event.mapper.EventMapper;
 import ru.practicum.event.model.Event;
@@ -15,11 +16,15 @@ import ru.practicum.event.repository.EventRepository;
 import ru.practicum.exception.ConflictException;
 import ru.practicum.exception.ForbiddenException;
 import ru.practicum.exception.NotFoundException;
+import ru.practicum.exception.ValidationException;
 import ru.practicum.user.model.User;
 import ru.practicum.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +33,7 @@ public class EventServiceImpl implements EventService {
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
     private final EventMapper eventMapper;
+    private final StateClient stateClient;
 
     @Override
     public EventFullDto createEvent(Long userId, NewEventDto newEventDto) {
@@ -43,6 +49,8 @@ public class EventServiceImpl implements EventService {
         event.setInitiator(user);
         event.setCategory(category);
         event.setConfirmedRequests(0L);
+        event.setState(EventState.PENDING);
+        event.setCreatedOn(LocalDateTime.now());
 
         Event savedEvent = eventRepository.save(event);
         return eventMapper.toFullDto(savedEvent);
@@ -129,6 +137,9 @@ public class EventServiceImpl implements EventService {
         Event event = eventRepository.findByIdAndInitiatorId(eventId, userId)
                 .orElseThrow(() -> new NotFoundException("Событие с id " + eventId + " не найдено"));
 
+        Long views = getEventViews(eventId);
+        event.setViews(views);
+
         return eventMapper.toFullDto(event);
     }
 
@@ -141,6 +152,9 @@ public class EventServiceImpl implements EventService {
             throw new NotFoundException("Событие не опубликовано");
         }
 
+        Long views = getEventViews(eventId);
+        event.setViews(views);
+
         return eventMapper.toFullDto(event);
     }
 
@@ -148,8 +162,13 @@ public class EventServiceImpl implements EventService {
     public List<EventShortDto> getUserEvents(Long userId, Integer from, Integer size) {
         Pageable pageable = PageRequest.of(from / size, size);
 
-        return eventRepository.findByInitiatorId(userId, pageable)
-                .stream()
+        List<Event> events = eventRepository.findByInitiatorId(userId, pageable)
+                .getContent();
+
+        Map<Long, Long> viewsMap = getEventsViews(events);
+        events.forEach(event -> event.setViews(viewsMap.getOrDefault(event.getId(), 0L)));
+
+        return events.stream()
                 .map(eventMapper::toShortDto)
                 .toList();
     }
@@ -160,8 +179,13 @@ public class EventServiceImpl implements EventService {
                                              Integer from, Integer size) {
         Pageable pageable = PageRequest.of(from / size, size);
 
-        return eventRepository.findEventsByAdmin(users, states, categories, rangeStart, rangeEnd, pageable)
-                .stream()
+        List<Event> events = eventRepository.findEventsByAdmin(users, states, categories, rangeStart, rangeEnd, pageable)
+                .getContent();
+
+        Map<Long, Long> viewsMap = getEventsViews(events);
+        events.forEach(event -> event.setViews(viewsMap.getOrDefault(event.getId(), 0L)));
+
+        return events.stream()
                 .map(eventMapper::toFullDto)
                 .toList();
     }
@@ -170,6 +194,10 @@ public class EventServiceImpl implements EventService {
     public List<EventShortDto> getPublicEvents(String text, List<Long> categories, Boolean paid,
                                                LocalDateTime rangeStart, LocalDateTime rangeEnd, Boolean onlyAvailable,
                                                String sort, Integer from, Integer size) {
+        if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
+            throw new ValidationException("Дата начала не может быть позже даты окончания");
+        }
+
         if (rangeStart == null && rangeEnd == null) {
             rangeStart = LocalDateTime.now();
         }
@@ -177,13 +205,85 @@ public class EventServiceImpl implements EventService {
         Pageable pageable;
         if ("VIEWS".equals(sort)) {
             pageable = PageRequest.of(from / size, size, Sort.by("views").descending());
+        } else if ("EVENT_DATE".equals(sort)) {
+            pageable = PageRequest.of(from / size, size, Sort.by("eventDate").descending());
         } else {
             pageable = PageRequest.of(from / size, size, Sort.by("eventDate").descending());
         }
 
-        return eventRepository.findPublishedEvents(text, categories, paid, rangeStart, rangeEnd, onlyAvailable, pageable)
-                .stream()
+        List<Event> events;
+        try {
+            events = eventRepository.findPublishedEvents(
+                    text, categories, paid, rangeStart, rangeEnd,
+                    onlyAvailable != null ? onlyAvailable : false, pageable
+            ).getContent();
+        } catch (Exception e) {
+            events = Collections.emptyList();
+        }
+
+        Map<Long, Long> viewsMap = getEventsViews(events);
+        events.forEach(event -> event.setViews(viewsMap.getOrDefault(event.getId(), 0L)));
+
+        if ("VIEWS".equals(sort)) {
+            events.sort((e1, e2) -> Long.compare(
+                    e2.getViews() != null ? e2.getViews() : 0L,
+                    e1.getViews() != null ? e1.getViews() : 0L
+            ));
+        }
+
+        return events.stream()
                 .map(eventMapper::toShortDto)
                 .toList();
+    }
+
+    private Long getEventViews(Long eventId) {
+        try {
+            LocalDateTime start = LocalDateTime.now().minusYears(1);
+            LocalDateTime end = LocalDateTime.now();
+            List<String> uris = List.of("/events/" + eventId);
+
+            return stateClient.stats(start, end, uris, true)
+                    .stream()
+                    .findFirst()
+                    .map(stats -> stats.getHits() != null ? stats.getHits() : 0L)
+                    .orElse(0L);
+        } catch (Exception e) {
+            return 0L;
+        }
+    }
+
+    private Map<Long, Long> getEventsViews(List<Event> events) {
+        if (events.isEmpty()) {
+            return Map.of();
+        }
+
+        try {
+            List<String> uris = events.stream()
+                    .map(event -> "/events/" + event.getId())
+                    .collect(Collectors.toList());
+
+            LocalDateTime start = LocalDateTime.now().minusYears(1);
+            LocalDateTime end = LocalDateTime.now();
+
+            return stateClient.stats(start, end, uris, true)
+                    .stream()
+                    .collect(Collectors.toMap(
+                            stats -> extractEventIdFromUri(stats.getUri()),
+                            stats -> stats.getHits() != null ? stats.getHits() : 0L,
+                            (existing, replacement) -> existing
+                    ));
+        } catch (Exception e) {
+            return events.stream()
+                    .collect(Collectors.toMap(Event::getId, event -> 0L));
+        }
+    }
+
+    private Long extractEventIdFromUri(String uri) {
+        try {
+            String[] parts = uri.split("/");
+            return Long.parseLong(parts[parts.length - 1]);
+        } catch (Exception e) {
+            throw new ValidationException("Неверный формат URI: " + uri);
+        }
     }
 }
