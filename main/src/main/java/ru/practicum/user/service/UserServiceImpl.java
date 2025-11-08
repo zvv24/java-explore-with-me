@@ -32,13 +32,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserDto> getUser(List<Long> id, Pageable pageable) {
+    public List<UserDto> getUser(List<Long> ids, Pageable pageable) {
         Page<User> usersPage;
 
-        if (id == null || id.isEmpty()) {
+        if (ids == null || ids.isEmpty()) {
             usersPage = userRepository.findAll(pageable);
         } else {
-            usersPage = userRepository.findAllByIdIn(id, pageable);
+            usersPage = userRepository.findAllByIdIn(ids, pageable);
         }
 
         return usersPage.getContent()

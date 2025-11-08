@@ -3,24 +3,24 @@ package ru.practicum.event.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import ru.practicum.category.model.Category;
 import ru.practicum.category.repository.CategoryRepository;
 import ru.practicum.client.StateClient;
+import ru.practicum.dto.ViewStats;
 import ru.practicum.event.dto.*;
 import ru.practicum.event.mapper.EventMapper;
 import ru.practicum.event.model.Event;
 import ru.practicum.event.model.EventState;
 import ru.practicum.event.repository.EventRepository;
 import ru.practicum.exception.ConflictException;
-import ru.practicum.exception.ForbiddenException;
 import ru.practicum.exception.NotFoundException;
 import ru.practicum.exception.ValidationException;
 import ru.practicum.user.model.User;
 import ru.practicum.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +42,7 @@ public class EventServiceImpl implements EventService {
         Category category = categoryRepository.findById(newEventDto.getCategory())
                 .orElseThrow(() -> new NotFoundException("Категория с id " + newEventDto.getCategory() + " не найдена"));
         if (newEventDto.getEventDate().isBefore(LocalDateTime.now().plusHours(2))) {
-            throw new ForbiddenException("Дата события должна быть не раньше чем через 2 часа от текущего момента");
+            throw new ValidationException("Дата события должна быть не раньше чем через 2 часа от текущего момента");
         }
 
         Event event = eventMapper.toEntity(newEventDto);
@@ -64,9 +64,14 @@ public class EventServiceImpl implements EventService {
         if (event.getState() == EventState.PUBLISHED) {
             throw new ConflictException("Нельзя редактировать опубликованное событие");
         }
+
         if (updateRequest.getEventDate() != null &&
                 updateRequest.getEventDate().isBefore(LocalDateTime.now().plusHours(2))) {
-            throw new ForbiddenException("Дата события должна быть не раньше чем через 2 часа от текущего момента");
+            throw new ValidationException("Дата события должна быть не раньше чем через 2 часа от текущего момента");
+        }
+
+        if (updateRequest.getParticipantLimit() != null && updateRequest.getParticipantLimit() < 0) {
+            throw new ValidationException("Лимит участников не может быть отрицательным");
         }
 
         if (updateRequest.getCategory() != null) {
@@ -99,7 +104,11 @@ public class EventServiceImpl implements EventService {
 
         if (updateRequest.getEventDate() != null &&
                 updateRequest.getEventDate().isBefore(LocalDateTime.now().plusHours(1))) {
-            throw new ForbiddenException("Дата начала события должна быть не ранее чем за час от даты публикации");
+            throw new ValidationException("Дата начала события должна быть не ранее чем за час от даты публикации");
+        }
+
+        if (updateRequest.getParticipantLimit() != null && updateRequest.getParticipantLimit() < 0) {
+            throw new ValidationException("Лимит участников не может быть отрицательным");
         }
 
         if (updateRequest.getCategory() != null) {
@@ -177,63 +186,146 @@ public class EventServiceImpl implements EventService {
     public List<EventFullDto> getAdminEvents(List<Long> users, List<EventState> states, List<Long> categories,
                                              LocalDateTime rangeStart, LocalDateTime rangeEnd,
                                              Integer from, Integer size) {
-        Pageable pageable = PageRequest.of(from / size, size);
+        try {
+            if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
+                throw new ValidationException("Дата начала не может быть позже даты окончания");
+            }
 
-        List<Event> events = eventRepository.findEventsByAdmin(users, states, categories, rangeStart, rangeEnd, pageable)
-                .getContent();
+            List<Event> allEvents = eventRepository.findAll();
 
-        Map<Long, Long> viewsMap = getEventsViews(events);
-        events.forEach(event -> event.setViews(viewsMap.getOrDefault(event.getId(), 0L)));
+            List<Event> filteredEvents = allEvents.stream()
+                    .filter(event -> users == null || users.isEmpty() || users.contains(event.getInitiator().getId()))
+                    .filter(event -> states == null || states.isEmpty() || states.contains(event.getState()))
+                    .filter(event -> categories == null || categories.isEmpty() ||
+                            categories.contains(event.getCategory().getId()))
+                    .filter(event -> rangeStart == null || !event.getEventDate().isBefore(rangeStart))
+                    .filter(event -> rangeEnd == null || !event.getEventDate().isAfter(rangeEnd))
+                    .toList();
 
-        return events.stream()
-                .map(eventMapper::toFullDto)
-                .toList();
+            int startIndex = Math.min(from, filteredEvents.size());
+            int endIndex = Math.min(from + size, filteredEvents.size());
+            List<Event> paginatedEvents = filteredEvents.subList(startIndex, endIndex);
+
+            List<String> eventUris = paginatedEvents.stream()
+                    .map(event -> "/events/" + event.getId())
+                    .collect(Collectors.toList());
+
+            List<ViewStats> views = Collections.emptyList();
+            if (!eventUris.isEmpty()) {
+                try {
+                    views = stateClient.stats(
+                            LocalDateTime.now().minusYears(1),
+                            LocalDateTime.now(),
+                            eventUris,
+                            true
+                    );
+                } catch (Exception e) {
+                    views = Collections.emptyList();
+                }
+            }
+
+            List<EventFullDto> result = new ArrayList<>();
+            for (Event event : paginatedEvents) {
+                EventFullDto fullDto = eventMapper.toFullDto(event);
+
+                Long eventViews = views.stream()
+                        .filter(view -> view.getUri().equals("/events/" + event.getId()))
+                        .findFirst()
+                        .map(ViewStats::getHits)
+                        .orElse(0L);
+
+                fullDto.setViews(eventViews);
+                result.add(fullDto);
+            }
+
+            return result;
+
+        } catch (ValidationException e) {
+            throw e;
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
     }
 
     @Override
     public List<EventShortDto> getPublicEvents(String text, List<Long> categories, Boolean paid,
                                                LocalDateTime rangeStart, LocalDateTime rangeEnd, Boolean onlyAvailable,
                                                String sort, Integer from, Integer size) {
-        if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
-            throw new ValidationException("Дата начала не может быть позже даты окончания");
-        }
-
-        if (rangeStart == null && rangeEnd == null) {
-            rangeStart = LocalDateTime.now();
-        }
-
-        Pageable pageable;
-        if ("VIEWS".equals(sort)) {
-            pageable = PageRequest.of(from / size, size, Sort.by("views").descending());
-        } else if ("EVENT_DATE".equals(sort)) {
-            pageable = PageRequest.of(from / size, size, Sort.by("eventDate").descending());
-        } else {
-            pageable = PageRequest.of(from / size, size, Sort.by("eventDate").descending());
-        }
-
-        List<Event> events;
         try {
-            events = eventRepository.findPublishedEvents(
-                    text, categories, paid, rangeStart, rangeEnd,
-                    onlyAvailable != null ? onlyAvailable : false, pageable
-            ).getContent();
+            if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
+                throw new ValidationException("Дата начала не может быть позже даты окончания");
+            }
+
+            List<Event> allEvents = eventRepository.findAll();
+
+            List<Event> filteredEvents = allEvents.stream()
+                    .filter(event -> event.getState() == EventState.PUBLISHED)
+                    .filter(event -> text == null || text.isEmpty() ||
+                            event.getAnnotation().toLowerCase().contains(text.toLowerCase()) ||
+                            event.getDescription().toLowerCase().contains(text.toLowerCase()))
+                    .filter(event -> categories == null || categories.isEmpty() ||
+                            categories.contains(event.getCategory().getId()))
+                    .filter(event -> paid == null || event.getPaid() == paid)
+                    .filter(event -> rangeStart == null || !event.getEventDate().isBefore(rangeStart))
+                    .filter(event -> rangeEnd == null || !event.getEventDate().isAfter(rangeEnd))
+                    .filter(event -> !Boolean.TRUE.equals(onlyAvailable) ||
+                            event.getParticipantLimit() == 0 ||
+                            (event.getConfirmedRequests() != null && event.getConfirmedRequests() <
+                                    event.getParticipantLimit()))
+                    .toList();
+
+            int startIndex = Math.min(from, filteredEvents.size());
+            int endIndex = Math.min(from + size, filteredEvents.size());
+            List<Event> paginatedEvents = filteredEvents.subList(startIndex, endIndex);
+
+            List<String> eventUris = paginatedEvents.stream()
+                    .map(event -> "/events/" + event.getId())
+                    .collect(Collectors.toList());
+
+            List<ViewStats> views = Collections.emptyList();
+            if (!eventUris.isEmpty()) {
+                try {
+                    views = stateClient.stats(
+                            LocalDateTime.now().minusYears(1),
+                            LocalDateTime.now(),
+                            eventUris,
+                            true
+                    );
+                } catch (Exception e) {
+                    views = Collections.emptyList();
+                }
+            }
+
+            List<EventShortDto> result = new ArrayList<>();
+            for (Event event : paginatedEvents) {
+                EventShortDto shortDto = eventMapper.toShortDto(event);
+
+                Long eventViews = views.stream()
+                        .filter(view -> view.getUri().equals("/events/" + event.getId()))
+                        .findFirst()
+                        .map(ViewStats::getHits)
+                        .orElse(0L);
+
+                shortDto.setViews(eventViews);
+                result.add(shortDto);
+            }
+
+            if ("VIEWS".equals(sort)) {
+                result.sort((e1, e2) -> Long.compare(
+                        e2.getViews() != null ? e2.getViews() : 0L,
+                        e1.getViews() != null ? e1.getViews() : 0L
+                ));
+            } else if ("EVENT_DATE".equals(sort)) {
+                result.sort((e1, e2) -> e2.getEventDate().compareTo(e1.getEventDate()));
+            }
+
+            return result;
+
+        } catch (ValidationException e) {
+            throw e;
         } catch (Exception e) {
-            events = Collections.emptyList();
+            return Collections.emptyList();
         }
-
-        Map<Long, Long> viewsMap = getEventsViews(events);
-        events.forEach(event -> event.setViews(viewsMap.getOrDefault(event.getId(), 0L)));
-
-        if ("VIEWS".equals(sort)) {
-            events.sort((e1, e2) -> Long.compare(
-                    e2.getViews() != null ? e2.getViews() : 0L,
-                    e1.getViews() != null ? e1.getViews() : 0L
-            ));
-        }
-
-        return events.stream()
-                .map(eventMapper::toShortDto)
-                .toList();
     }
 
     private Long getEventViews(Long eventId) {
@@ -253,10 +345,6 @@ public class EventServiceImpl implements EventService {
     }
 
     private Map<Long, Long> getEventsViews(List<Event> events) {
-        if (events.isEmpty()) {
-            return Map.of();
-        }
-
         try {
             List<String> uris = events.stream()
                     .map(event -> "/events/" + event.getId())

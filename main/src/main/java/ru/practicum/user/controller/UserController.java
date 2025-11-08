@@ -24,10 +24,10 @@ public class UserController {
     }
 
     @GetMapping
-    public List<UserDto> getUsers(@RequestParam(required = false) List<Long> id,
+    public List<UserDto> getUsers(@RequestParam(required = false) List<Long> ids,
                                   @RequestParam(defaultValue = "0") Integer from,
                                   @RequestParam(defaultValue = "10") Integer size) {
-        return userService.getUser(id, PageRequest.of(from / size, size));
+        return userService.getUser(ids, PageRequest.of(from / size, size));
     }
 
     @DeleteMapping("/{userId}")

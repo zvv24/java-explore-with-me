@@ -13,8 +13,8 @@ import ru.practicum.compilation.model.Compilation;
 import ru.practicum.compilation.repository.CompilationRepository;
 import ru.practicum.event.model.Event;
 import ru.practicum.event.repository.EventRepository;
-import ru.practicum.exception.ConflictException;
 import ru.practicum.exception.NotFoundException;
+import ru.practicum.exception.ValidationException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +29,7 @@ public class CompilationServiceImpl implements CompilationService {
     @Override
     public CompilationDto createCompilation(NewCompilationDto newCompilationDto) {
         if (compilationRepository.existsByTitle(newCompilationDto.getTitle())) {
-            throw new ConflictException("Подборка с названием '" + newCompilationDto.getTitle() + "' уже существует");
+            throw new ValidationException("Подборка с названием '" + newCompilationDto.getTitle() + "' уже существует");
         }
         Compilation compilation = compilationMapper.toEntity(newCompilationDto);
 
@@ -51,7 +51,7 @@ public class CompilationServiceImpl implements CompilationService {
         if (updateRequest.getTitle() != null &&
                 !compilation.getTitle().equals(updateRequest.getTitle()) &&
                 compilationRepository.existsByTitle(updateRequest.getTitle())) {
-            throw new ConflictException("Подборка с названием '" + updateRequest.getTitle() + "' уже существует");
+            throw new ValidationException("Подборка с названием '" + updateRequest.getTitle() + "' уже существует");
         }
         compilationMapper.updateCompilationFromRequest(updateRequest, compilation);
 

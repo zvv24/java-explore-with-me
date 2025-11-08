@@ -46,8 +46,8 @@ public class StateClient {
     }
 
     public List<ViewStats> stats(LocalDateTime start, LocalDateTime end, List<String> uris, boolean unique) {
-        String formattedStart = DateTimeFormatter.ofPattern(String.valueOf(formatter)).format(start);
-        String formattedEnd = DateTimeFormatter.ofPattern(String.valueOf(formatter)).format(end);
+        String formattedStart = start.format(formatter);
+        String formattedEnd = end.format(formatter);
 
         String urisParam = "";
         if (uris != null && !uris.isEmpty()) {

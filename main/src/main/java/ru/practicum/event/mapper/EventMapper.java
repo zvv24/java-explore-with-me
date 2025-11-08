@@ -42,19 +42,19 @@ public class EventMapper {
                 event.getId(),
                 event.getAnnotation(),
                 categoryMapper.toDto(event.getCategory()),
-                event.getConfirmedRequests(),
+                event.getConfirmedRequests() != null ? event.getConfirmedRequests() : 0L,
                 event.getCreatedOn(),
                 event.getDescription(),
                 event.getEventDate(),
                 userMapper.toShortDto(event.getInitiator()),
                 location,
-                event.getPaid(),
-                event.getParticipantLimit(),
+                event.getPaid() != null ? event.getPaid() : false,
+                event.getParticipantLimit() != null ? event.getParticipantLimit() : 0L,
                 event.getPublishedOn(),
-                event.getRequestModeration(),
-                event.getState().name(),
+                event.getRequestModeration() != null ? event.getRequestModeration() : true,
+                event.getState() != null ? event.getState().name() : "PENDING",
                 event.getTitle(),
-                event.getViews()
+                event.getViews() != null ? event.getViews() : 0L
         );
     }
 
@@ -63,12 +63,12 @@ public class EventMapper {
                 event.getId(),
                 event.getAnnotation(),
                 categoryMapper.toDto(event.getCategory()),
-                event.getConfirmedRequests(),
+                event.getConfirmedRequests() != null ? event.getConfirmedRequests() : 0L,
                 event.getEventDate(),
                 userMapper.toShortDto(event.getInitiator()),
-                event.getPaid(),
+                event.getPaid() != null ? event.getPaid() : false,
                 event.getTitle(),
-                event.getViews()
+                event.getViews() != null ? event.getViews() : 0L
         );
     }
 
