@@ -1,6 +1,5 @@
 package ru.practicum.request.mapper;
 
-import org.springframework.stereotype.Component;
 import ru.practicum.event.model.Event;
 import ru.practicum.request.dto.RequestDto;
 import ru.practicum.request.model.Request;
@@ -9,9 +8,8 @@ import ru.practicum.user.model.User;
 
 import java.time.LocalDateTime;
 
-@Component
 public class RequestMapper {
-    public RequestDto toDto(Request request) {
+    public static RequestDto toDto(Request request) {
         return new RequestDto(
                 request.getId(),
                 request.getCreated(),
@@ -21,7 +19,7 @@ public class RequestMapper {
         );
     }
 
-    public Request toNewEntity(Event event, User requester) {
+    public static Request toNewEntity(Event event, User requester) {
         Request request = new Request();
         request.setCreated(LocalDateTime.now());
         request.setEvent(event);

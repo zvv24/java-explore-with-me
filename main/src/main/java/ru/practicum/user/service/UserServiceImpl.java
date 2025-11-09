@@ -18,7 +18,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
-    private final UserMapper userMapper;
 
     @Override
     public UserDto createUser(NewUserRequest newUserRequest) {
@@ -26,9 +25,9 @@ public class UserServiceImpl implements UserService {
             throw new ConflictException("Пользователь с email" + newUserRequest.getEmail() + " уже существует");
         }
 
-        User user = userMapper.toEntity(newUserRequest);
+        User user = UserMapper.toEntity(newUserRequest);
         User newUser = userRepository.save(user);
-        return userMapper.toDto(newUser);
+        return UserMapper.toDto(newUser);
     }
 
     @Override
@@ -43,7 +42,7 @@ public class UserServiceImpl implements UserService {
 
         return usersPage.getContent()
                 .stream()
-                .map(userMapper::toDto)
+                .map(UserMapper::toDto)
                 .toList();
     }
 

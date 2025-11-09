@@ -10,7 +10,7 @@ import ru.practicum.event.dto.EventShortDto;
 import ru.practicum.event.mapper.EventMapper;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
 @Component
@@ -22,7 +22,7 @@ public class CompilationMapper {
         Compilation compilation = new Compilation();
         compilation.setTitle(newCompilationDto.getTitle());
         compilation.setPinned(newCompilationDto.getPinned() != null ? newCompilationDto.getPinned() : false);
-        compilation.setEvents(Collections.emptyList());
+        compilation.setEvents(new HashSet<>());
         return compilation;
     }
 

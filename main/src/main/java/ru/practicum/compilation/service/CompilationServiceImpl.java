@@ -1,7 +1,6 @@
 package ru.practicum.compilation.service;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -16,7 +15,7 @@ import ru.practicum.event.repository.EventRepository;
 import ru.practicum.exception.NotFoundException;
 import ru.practicum.exception.ValidationException;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 @Service
@@ -28,40 +27,40 @@ public class CompilationServiceImpl implements CompilationService {
 
     @Override
     public CompilationDto createCompilation(NewCompilationDto newCompilationDto) {
-        if (compilationRepository.existsByTitle(newCompilationDto.getTitle())) {
-            throw new ValidationException("Подборка с названием '" + newCompilationDto.getTitle() + "' уже существует");
-        }
         Compilation compilation = compilationMapper.toEntity(newCompilationDto);
 
         if (newCompilationDto.getEvents() != null && !newCompilationDto.getEvents().isEmpty()) {
             List<Event> events = eventRepository.findAllById(newCompilationDto.getEvents());
-            compilation.setEvents(events);
+            compilation.setEvents(new HashSet<>(events));
         } else {
-            compilation.setEvents(new ArrayList<>());
+            compilation.setEvents(new HashSet<>());
         }
 
-        Compilation savedCompilation = compilationRepository.save(compilation);
-        return compilationMapper.toDto(savedCompilation);
+        try {
+            Compilation savedCompilation = compilationRepository.save(compilation);
+            return compilationMapper.toDto(savedCompilation);
+        } catch (Exception e) {
+            throw new ValidationException("Подборка с таким названием уже существует");
+        }
     }
 
     @Override
     public CompilationDto updateCompilation(Long compId, UpdateCompilationRequest updateRequest) {
         Compilation compilation = compilationRepository.findByIdWithEvents(compId)
                 .orElseThrow(() -> new NotFoundException("Подборка с id " + compId + " не найдена"));
-        if (updateRequest.getTitle() != null &&
-                !compilation.getTitle().equals(updateRequest.getTitle()) &&
-                compilationRepository.existsByTitle(updateRequest.getTitle())) {
-            throw new ValidationException("Подборка с названием '" + updateRequest.getTitle() + "' уже существует");
-        }
         compilationMapper.updateCompilationFromRequest(updateRequest, compilation);
 
         if (updateRequest.getEvents() != null) {
             List<Event> events = eventRepository.findAllById(updateRequest.getEvents());
-            compilation.setEvents(events);
+            compilation.setEvents(new HashSet<>(events));
         }
 
-        Compilation updatedCompilation = compilationRepository.save(compilation);
-        return compilationMapper.toDto(updatedCompilation);
+        try {
+            Compilation updatedCompilation = compilationRepository.save(compilation);
+            return compilationMapper.toDto(updatedCompilation);
+        } catch (Exception e) {
+            throw new ValidationException("Подборка с таким названием уже существует");
+        }
     }
 
     @Override
@@ -75,17 +74,13 @@ public class CompilationServiceImpl implements CompilationService {
     @Override
     public List<CompilationDto> getCompilations(Boolean pinned, Integer from, Integer size) {
         Pageable pageable = PageRequest.of(from / size, size);
+
         List<Compilation> compilations;
 
         if (pinned != null) {
-            compilations = compilationRepository.findAllWithEvents(pinned);
+            compilations = compilationRepository.findAllWithEvents(pinned, pageable);
         } else {
-            Page<Compilation> page = compilationRepository.findAll(pageable);
-            compilations = page.getContent();
-
-            for (Compilation compilation : compilations) {
-                compilation.getEvents().size();
-            }
+            compilations = compilationRepository.findAllWithEvents(null, pageable);
         }
 
         return compilations.stream()

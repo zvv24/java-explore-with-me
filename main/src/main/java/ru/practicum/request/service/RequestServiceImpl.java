@@ -26,7 +26,6 @@ public class RequestServiceImpl implements RequestService {
     private final RequestRepository requestRepository;
     private final UserRepository userRepository;
     private final EventRepository eventRepository;
-    private final RequestMapper requestMapper;
 
     @Override
     public RequestDto createRequest(Long userId, Long eventId) {
@@ -49,7 +48,7 @@ public class RequestServiceImpl implements RequestService {
             throw new ConflictException("Достигнут лимит запросов на участие");
         }
 
-        Request request = requestMapper.toNewEntity(event, user);
+        Request request = RequestMapper.toNewEntity(event, user);
 
         if (!event.getRequestModeration() || event.getParticipantLimit() == 0) {
             request.setStatus(RequestStatus.CONFIRMED);
@@ -58,7 +57,7 @@ public class RequestServiceImpl implements RequestService {
         }
 
         Request savedRequest = requestRepository.save(request);
-        return requestMapper.toDto(savedRequest);
+        return RequestMapper.toDto(savedRequest);
     }
 
     @Override
@@ -96,12 +95,12 @@ public class RequestServiceImpl implements RequestService {
 
                 request.setStatus(RequestStatus.CONFIRMED);
                 confirmedCount++;
-                confirmedRequests.add(requestMapper.toDto(request));
+                confirmedRequests.add(RequestMapper.toDto(request));
 
                 event.setConfirmedRequests(confirmedCount);
             } else if (updateRequest.getStatus().equals("REJECTED")) {
                 request.setStatus(RequestStatus.REJECTED);
-                rejectedRequests.add(requestMapper.toDto(request));
+                rejectedRequests.add(RequestMapper.toDto(request));
             }
         }
 
@@ -115,7 +114,7 @@ public class RequestServiceImpl implements RequestService {
             List<Request> pendingRequests = requestRepository.findByEventIdAndStatus(eventId, RequestStatus.PENDING);
             for (Request pendingRequest : pendingRequests) {
                 pendingRequest.setStatus(RequestStatus.REJECTED);
-                rejectedRequests.add(requestMapper.toDto(pendingRequest));
+                rejectedRequests.add(RequestMapper.toDto(pendingRequest));
             }
             requestRepository.saveAll(pendingRequests);
         }
@@ -129,7 +128,7 @@ public class RequestServiceImpl implements RequestService {
     @Override
     public List<RequestDto> getUserRequests(Long userId) {
         return requestRepository.findByRequesterId(userId).stream()
-                .map(requestMapper::toDto)
+                .map(RequestMapper::toDto)
                 .toList();
     }
 
@@ -143,7 +142,7 @@ public class RequestServiceImpl implements RequestService {
         }
 
         return requestRepository.findByEventId(eventId).stream()
-                .map(requestMapper::toDto)
+                .map(RequestMapper::toDto)
                 .toList();
     }
 
@@ -155,6 +154,6 @@ public class RequestServiceImpl implements RequestService {
         request.setStatus(RequestStatus.CANCELED);
 
         Request canceledRequest = requestRepository.save(request);
-        return requestMapper.toDto(canceledRequest);
+        return RequestMapper.toDto(canceledRequest);
     }
 }

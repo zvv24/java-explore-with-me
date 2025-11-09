@@ -3,21 +3,21 @@ package ru.practicum.event.mapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.practicum.category.mapper.CategoryMapper;
+import ru.practicum.category.model.Category;
 import ru.practicum.event.dto.*;
 import ru.practicum.event.model.Event;
 import ru.practicum.event.model.EventState;
 import ru.practicum.event.model.Location;
 import ru.practicum.user.mapper.UserMapper;
+import ru.practicum.user.model.User;
 
 import java.time.LocalDateTime;
 
 @Component
 @RequiredArgsConstructor
 public class EventMapper {
-    private final CategoryMapper categoryMapper;
-    private final UserMapper userMapper;
 
-    public Event toEntity(NewEventDto newEventDto) {
+    public Event toEntity(NewEventDto newEventDto, User user, Category category) {
         Event event = new Event();
         event.setAnnotation(newEventDto.getAnnotation());
         event.setDescription(newEventDto.getDescription());
@@ -32,6 +32,11 @@ public class EventMapper {
         event.setState(EventState.PENDING);
         event.setConfirmedRequests(0L);
         event.setViews(0L);
+        event.setInitiator(user);
+        event.setCategory(category);
+        event.setConfirmedRequests(0L);
+        event.setState(EventState.PENDING);
+        event.setCreatedOn(LocalDateTime.now());
         return event;
     }
 
@@ -41,12 +46,12 @@ public class EventMapper {
         return new EventFullDto(
                 event.getId(),
                 event.getAnnotation(),
-                categoryMapper.toDto(event.getCategory()),
+                CategoryMapper.toDto(event.getCategory()),
                 event.getConfirmedRequests() != null ? event.getConfirmedRequests() : 0L,
                 event.getCreatedOn(),
                 event.getDescription(),
                 event.getEventDate(),
-                userMapper.toShortDto(event.getInitiator()),
+                UserMapper.toShortDto(event.getInitiator()),
                 location,
                 event.getPaid() != null ? event.getPaid() : false,
                 event.getParticipantLimit() != null ? event.getParticipantLimit() : 0L,
@@ -62,10 +67,10 @@ public class EventMapper {
         return new EventShortDto(
                 event.getId(),
                 event.getAnnotation(),
-                categoryMapper.toDto(event.getCategory()),
+                CategoryMapper.toDto(event.getCategory()),
                 event.getConfirmedRequests() != null ? event.getConfirmedRequests() : 0L,
                 event.getEventDate(),
-                userMapper.toShortDto(event.getInitiator()),
+                UserMapper.toShortDto(event.getInitiator()),
                 event.getPaid() != null ? event.getPaid() : false,
                 event.getTitle(),
                 event.getViews() != null ? event.getViews() : 0L

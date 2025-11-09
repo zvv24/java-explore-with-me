@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.category.dto.CategoryDto;
-import ru.practicum.category.dto.NewCategoryDto;
 import ru.practicum.category.service.CategoryService;
 
 import java.util.List;
@@ -18,8 +17,8 @@ public class CategoryController {
 
     @PostMapping("/admin/categories")
     @ResponseStatus(HttpStatus.CREATED)
-    public CategoryDto createCategory(@Valid @RequestBody NewCategoryDto newCategoryDto) {
-        return categoryService.createCategory(newCategoryDto);
+    public CategoryDto createCategory(@Valid @RequestBody CategoryDto categoryDto) {
+        return categoryService.createCategory(categoryDto);
     }
 
     @PatchMapping("/admin/categories/{catId}")

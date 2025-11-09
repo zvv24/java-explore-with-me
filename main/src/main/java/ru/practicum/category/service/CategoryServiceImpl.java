@@ -5,7 +5,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import ru.practicum.category.dto.CategoryDto;
-import ru.practicum.category.dto.NewCategoryDto;
 import ru.practicum.category.mapper.CategoryMapper;
 import ru.practicum.category.model.Category;
 import ru.practicum.category.repository.CategoryRepository;
@@ -18,17 +17,17 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
     private final CategoryRepository categoryRepository;
-    private final CategoryMapper categoryMapper;
 
     @Override
-    public CategoryDto createCategory(NewCategoryDto newCategoryDto) {
-        if (categoryRepository.existsByName(newCategoryDto.getName())) {
+    public CategoryDto createCategory(CategoryDto categoryDto) {
+        Category category = CategoryMapper.toEntity(categoryDto);
+
+        try {
+            Category newCategory = categoryRepository.save(category);
+            return CategoryMapper.toDto(newCategory);
+        } catch (Exception e) {
             throw new ConflictException("Категория с таким именем уже существует");
         }
-
-        Category category = categoryMapper.toEntity(newCategoryDto);
-        Category newCategory = categoryRepository.save(category);
-        return categoryMapper.toDto(newCategory);
     }
 
     @Override
@@ -36,14 +35,14 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new NotFoundException("Категория с id" + categoryId + " не найдена"));
 
-        if (!category.getName().equals(categoryDto.getName()) &&
-                categoryRepository.existsByName(categoryDto.getName())) {
+        category.setName(categoryDto.getName());
+
+        try {
+            Category newCategory = categoryRepository.save(category);
+            return CategoryMapper.toDto(newCategory);
+        } catch (Exception e) {
             throw new ConflictException("Категория с таким именем уже существует");
         }
-
-        category.setName(categoryDto.getName());
-        Category newCategory = categoryRepository.save(category);
-        return categoryMapper.toDto(newCategory);
     }
 
     @Override
@@ -51,7 +50,7 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new NotFoundException("Категория с id" + categoryId + " не найдена"));
 
-        return categoryMapper.toDto(category);
+        return CategoryMapper.toDto(category);
     }
 
     @Override
@@ -60,7 +59,7 @@ public class CategoryServiceImpl implements CategoryService {
 
         return categories.getContent()
                 .stream()
-                .map(categoryMapper::toDto)
+                .map(CategoryMapper::toDto)
                 .toList();
     }
 
