@@ -182,27 +182,30 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public List<EventFullDto> getAdminEvents(List<Long> users, List<EventState> states, List<Long> categories,
-                                             LocalDateTime rangeStart, LocalDateTime rangeEnd,
-                                             Integer from, Integer size) {
+    public List<EventFullDto> getAdminEvents(AdminEventParams params) {
         try {
-            if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
+            if (params.getRangeStart() != null && params.getRangeEnd() != null &&
+                    params.getRangeStart().isAfter(params.getRangeEnd())) {
                 throw new ValidationException("Дата начала не может быть позже даты окончания");
             }
 
             List<Event> allEvents = eventRepository.findAll();
 
             List<Event> filteredEvents = allEvents.stream()
-                    .filter(event -> users == null || users.isEmpty() || users.contains(event.getInitiator().getId()))
-                    .filter(event -> states == null || states.isEmpty() || states.contains(event.getState()))
-                    .filter(event -> categories == null || categories.isEmpty() ||
-                            categories.contains(event.getCategory().getId()))
-                    .filter(event -> rangeStart == null || !event.getEventDate().isBefore(rangeStart))
-                    .filter(event -> rangeEnd == null || !event.getEventDate().isAfter(rangeEnd))
+                    .filter(event -> params.getUsers() == null || params.getUsers().isEmpty() ||
+                            params.getUsers().contains(event.getInitiator().getId()))
+                    .filter(event -> params.getStates() == null || params.getStates().isEmpty() ||
+                            params.getStates().contains(event.getState()))
+                    .filter(event -> params.getCategories() == null || params.getCategories().isEmpty() ||
+                            params.getCategories().contains(event.getCategory().getId()))
+                    .filter(event -> params.getRangeStart() == null ||
+                            !event.getEventDate().isBefore(params.getRangeStart()))
+                    .filter(event -> params.getRangeEnd() == null ||
+                            !event.getEventDate().isAfter(params.getRangeEnd()))
                     .toList();
 
-            int startIndex = Math.min(from, filteredEvents.size());
-            int endIndex = Math.min(from + size, filteredEvents.size());
+            int startIndex = Math.min(params.getFrom(), filteredEvents.size());
+            int endIndex = Math.min(params.getFrom() + params.getSize(), filteredEvents.size());
             List<Event> paginatedEvents = filteredEvents.subList(startIndex, endIndex);
 
             Map<Long, Long> viewsMap = getEventsViews(paginatedEvents);
@@ -224,11 +227,10 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public List<EventShortDto> getPublicEvents(String text, List<Long> categories, Boolean paid,
-                                               LocalDateTime rangeStart, LocalDateTime rangeEnd, Boolean onlyAvailable,
-                                               String sort, Integer from, Integer size) {
+    public List<EventShortDto> getPublicEvents(PublicEventParams params) {
         try {
-            if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
+            if (params.getRangeStart() != null && params.getRangeEnd() != null &&
+                    params.getRangeStart().isAfter(params.getRangeEnd())) {
                 throw new ValidationException("Дата начала не может быть позже даты окончания");
             }
 
@@ -236,22 +238,24 @@ public class EventServiceImpl implements EventService {
 
             List<Event> filteredEvents = allEvents.stream()
                     .filter(event -> event.getState() == EventState.PUBLISHED)
-                    .filter(event -> text == null || text.isEmpty() ||
-                            event.getAnnotation().toLowerCase().contains(text.toLowerCase()) ||
-                            event.getDescription().toLowerCase().contains(text.toLowerCase()))
-                    .filter(event -> categories == null || categories.isEmpty() ||
-                            categories.contains(event.getCategory().getId()))
-                    .filter(event -> paid == null || event.getPaid() == paid)
-                    .filter(event -> rangeStart == null || !event.getEventDate().isBefore(rangeStart))
-                    .filter(event -> rangeEnd == null || !event.getEventDate().isAfter(rangeEnd))
-                    .filter(event -> !Boolean.TRUE.equals(onlyAvailable) ||
+                    .filter(event -> params.getText() == null || params.getText().isEmpty() ||
+                            event.getAnnotation().toLowerCase().contains(params.getText().toLowerCase()) ||
+                            event.getDescription().toLowerCase().contains(params.getText().toLowerCase()))
+                    .filter(event -> params.getCategories() == null || params.getCategories().isEmpty() ||
+                            params.getCategories().contains(event.getCategory().getId()))
+                    .filter(event -> params.getPaid() == null || event.getPaid() == params.getPaid())
+                    .filter(event -> params.getRangeStart() == null ||
+                            !event.getEventDate().isBefore(params.getRangeStart()))
+                    .filter(event -> params.getRangeEnd() == null ||
+                            !event.getEventDate().isAfter(params.getRangeEnd()))
+                    .filter(event -> !Boolean.TRUE.equals(params.getOnlyAvailable()) ||
                             event.getParticipantLimit() == 0 ||
                             (event.getConfirmedRequests() != null && event.getConfirmedRequests() <
                                     event.getParticipantLimit()))
                     .toList();
 
-            int startIndex = Math.min(from, filteredEvents.size());
-            int endIndex = Math.min(from + size, filteredEvents.size());
+            int startIndex = Math.min(params.getFrom(), filteredEvents.size());
+            int endIndex = Math.min(params.getFrom() + params.getSize(), filteredEvents.size());
             List<Event> paginatedEvents = filteredEvents.subList(startIndex, endIndex);
 
             Map<Long, Long> viewsMap = getEventsViews(paginatedEvents);
@@ -263,12 +267,12 @@ public class EventServiceImpl implements EventService {
                 result.add(shortDto);
             }
 
-            if ("VIEWS".equals(sort)) {
+            if ("VIEWS".equals(params.getSort())) {
                 result.sort((e1, e2) -> Long.compare(
                         e2.getViews() != null ? e2.getViews() : 0L,
                         e1.getViews() != null ? e1.getViews() : 0L
                 ));
-            } else if ("EVENT_DATE".equals(sort)) {
+            } else if ("EVENT_DATE".equals(params.getSort())) {
                 result.sort((e1, e2) -> e2.getEventDate().compareTo(e1.getEventDate()));
             }
 

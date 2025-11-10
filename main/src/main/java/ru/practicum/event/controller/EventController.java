@@ -56,7 +56,16 @@ public class EventController {
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime rangeEnd,
             @RequestParam(defaultValue = "0") Integer from,
             @RequestParam(defaultValue = "10") Integer size) {
-        return eventService.getAdminEvents(users, states, categories, rangeStart, rangeEnd, from, size);
+
+        return eventService.getAdminEvents(
+                new AdminEventParams(
+                        users,
+                        states,
+                        categories,
+                        rangeStart,
+                        rangeEnd,
+                        from,
+                        size));
     }
 
     @PatchMapping("/admin/events/{eventId}")
@@ -79,7 +88,17 @@ public class EventController {
             HttpServletRequest request) {
 
         stateClient.hit(request);
-        return eventService.getPublicEvents(text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size);
+        return eventService.getPublicEvents(
+                new PublicEventParams(
+                        text,
+                        categories,
+                        paid,
+                        rangeStart,
+                        rangeEnd,
+                        onlyAvailable,
+                        sort,
+                        from,
+                        size));
     }
 
     @GetMapping("/events/{id}")

@@ -13,7 +13,6 @@ import ru.practicum.compilation.repository.CompilationRepository;
 import ru.practicum.event.model.Event;
 import ru.practicum.event.repository.EventRepository;
 import ru.practicum.exception.NotFoundException;
-import ru.practicum.exception.ValidationException;
 
 import java.util.HashSet;
 import java.util.List;
@@ -36,12 +35,8 @@ public class CompilationServiceImpl implements CompilationService {
             compilation.setEvents(new HashSet<>());
         }
 
-        try {
-            Compilation savedCompilation = compilationRepository.save(compilation);
-            return compilationMapper.toDto(savedCompilation);
-        } catch (Exception e) {
-            throw new ValidationException("Подборка с таким названием уже существует");
-        }
+        Compilation savedCompilation = compilationRepository.save(compilation);
+        return compilationMapper.toDto(savedCompilation);
     }
 
     @Override
@@ -55,12 +50,8 @@ public class CompilationServiceImpl implements CompilationService {
             compilation.setEvents(new HashSet<>(events));
         }
 
-        try {
-            Compilation updatedCompilation = compilationRepository.save(compilation);
-            return compilationMapper.toDto(updatedCompilation);
-        } catch (Exception e) {
-            throw new ValidationException("Подборка с таким названием уже существует");
-        }
+        Compilation updatedCompilation = compilationRepository.save(compilation);
+        return compilationMapper.toDto(updatedCompilation);
     }
 
     @Override
@@ -80,7 +71,7 @@ public class CompilationServiceImpl implements CompilationService {
         if (pinned != null) {
             compilations = compilationRepository.findAllWithEvents(pinned, pageable);
         } else {
-            compilations = compilationRepository.findAllWithEvents(null, pageable);
+            compilations = compilationRepository.findAll(pageable).getContent();
         }
 
         return compilations.stream()

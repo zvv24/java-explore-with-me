@@ -21,13 +21,8 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     public CategoryDto createCategory(CategoryDto categoryDto) {
         Category category = CategoryMapper.toEntity(categoryDto);
-
-        try {
-            Category newCategory = categoryRepository.save(category);
-            return CategoryMapper.toDto(newCategory);
-        } catch (Exception e) {
-            throw new ConflictException("Категория с таким именем уже существует");
-        }
+        Category newCategory = categoryRepository.save(category);
+        return CategoryMapper.toDto(newCategory);
     }
 
     @Override
@@ -36,13 +31,8 @@ public class CategoryServiceImpl implements CategoryService {
                 .orElseThrow(() -> new NotFoundException("Категория с id" + categoryId + " не найдена"));
 
         category.setName(categoryDto.getName());
-
-        try {
-            Category newCategory = categoryRepository.save(category);
-            return CategoryMapper.toDto(newCategory);
-        } catch (Exception e) {
-            throw new ConflictException("Категория с таким именем уже существует");
-        }
+        Category newCategory = categoryRepository.save(category);
+        return CategoryMapper.toDto(newCategory);
     }
 
     @Override
