@@ -37,4 +37,7 @@ public class EventFullDto {
     private String state;
     private String title;
     private Long views;
+    private Long likes;
+    private Long dislikes;
+    private Long rating;
 }

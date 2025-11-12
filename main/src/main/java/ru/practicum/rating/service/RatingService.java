@@ -4,6 +4,7 @@ import ru.practicum.rating.dto.EventRatingDto;
 import ru.practicum.rating.dto.RatingDto;
 import ru.practicum.rating.dto.RatingEventFullDto;
 import ru.practicum.rating.dto.UserRatingDto;
+import ru.practicum.rating.model.RatingState;
 
 import java.util.List;
 
@@ -23,4 +24,6 @@ public interface RatingService {
     List<RatingEventFullDto> getEventsSortedByLikes(Integer from, Integer size);
 
     List<RatingEventFullDto> getEventsSortedByDislikes(Integer from, Integer size);
+
+    List<RatingEventFullDto> getEventsSorted(RatingState sortBy, Integer from, Integer size);
 }

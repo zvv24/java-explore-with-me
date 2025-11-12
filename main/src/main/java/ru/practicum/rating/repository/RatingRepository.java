@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import ru.practicum.rating.model.Rating;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface RatingRepository extends JpaRepository<Rating, Long> {
@@ -21,4 +22,6 @@ public interface RatingRepository extends JpaRepository<Rating, Long> {
 
     @Query("SELECT COUNT(r) FROM Rating r WHERE r.event.initiator.id = :userId AND r.isLike = false")
     Long countUserDislikes(@Param("userId") Long userId);
+
+    List<Rating> findByEventIdIn(List<Long> eventIds);
 }

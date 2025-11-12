@@ -14,6 +14,7 @@ import ru.practicum.rating.dto.RatingEventFullDto;
 import ru.practicum.rating.dto.UserRatingDto;
 import ru.practicum.rating.mapper.RatingMapper;
 import ru.practicum.rating.model.Rating;
+import ru.practicum.rating.model.RatingState;
 import ru.practicum.rating.repository.RatingRepository;
 import ru.practicum.user.model.User;
 import ru.practicum.user.repository.UserRepository;
@@ -87,42 +88,70 @@ public class RatingServiceImpl implements RatingService {
     @Override
     public List<RatingEventFullDto> getEventsSortedByRating(Integer from, Integer size) {
         Pageable pageable = PageRequest.of(from / size, size);
-        List<Event> events = eventRepository.findAll(pageable).getContent();
+
+        List<Event> events = eventRepository.findAllPublishedWithRatingsSortedByRating(pageable);
 
         return events.stream()
                 .map(event -> {
-                    EventRatingDto rating = getEventRating(event.getId());
-                    return RatingMapper.toRatingEventDto(event, rating);
+                    Long likes = ratingRepository.countByEventIdAndIsLikeTrue(event.getId());
+                    Long dislikes = ratingRepository.countByEventIdAndIsLikeFalse(event.getId());
+                    Long rating = likes - dislikes;
+
+                    EventRatingDto eventRating = new EventRatingDto(
+                            event.getId(), event.getTitle(), likes, dislikes, rating
+                    );
+                    return RatingMapper.toRatingEventDto(event, eventRating);
                 })
-                .sorted((e1, e2) -> Long.compare(e2.getRating(), e1.getRating()))
                 .toList();
     }
 
     @Override
     public List<RatingEventFullDto> getEventsSortedByLikes(Integer from, Integer size) {
         Pageable pageable = PageRequest.of(from / size, size);
-        List<Event> events = eventRepository.findAll(pageable).getContent();
+
+        List<Event> events = eventRepository.findAllPublishedWithRatingsSortedByLikes(pageable);
 
         return events.stream()
                 .map(event -> {
-                    EventRatingDto rating = getEventRating(event.getId());
-                    return RatingMapper.toRatingEventDto(event, rating);
+                    Long likes = ratingRepository.countByEventIdAndIsLikeTrue(event.getId());
+                    Long dislikes = ratingRepository.countByEventIdAndIsLikeFalse(event.getId());
+                    Long rating = likes - dislikes;
+
+                    EventRatingDto eventRating = new EventRatingDto(
+                            event.getId(), event.getTitle(), likes, dislikes, rating
+                    );
+                    return RatingMapper.toRatingEventDto(event, eventRating);
                 })
-                .sorted((e1, e2) -> Long.compare(e2.getLikes(), e1.getLikes()))
                 .toList();
     }
 
     @Override
     public List<RatingEventFullDto> getEventsSortedByDislikes(Integer from, Integer size) {
         Pageable pageable = PageRequest.of(from / size, size);
-        List<Event> events = eventRepository.findAll(pageable).getContent();
+
+        List<Event> events = eventRepository.findAllPublishedWithRatingsSortedByDislikes(pageable);
 
         return events.stream()
                 .map(event -> {
-                    EventRatingDto rating = getEventRating(event.getId());
-                    return RatingMapper.toRatingEventDto(event, rating);
+                    Long likes = ratingRepository.countByEventIdAndIsLikeTrue(event.getId());
+                    Long dislikes = ratingRepository.countByEventIdAndIsLikeFalse(event.getId());
+                    Long rating = likes - dislikes;
+
+                    EventRatingDto eventRating = new EventRatingDto(
+                            event.getId(), event.getTitle(), likes, dislikes, rating
+                    );
+                    return RatingMapper.toRatingEventDto(event, eventRating);
                 })
                 .sorted((e1, e2) -> Long.compare(e2.getDislikes(), e1.getDislikes()))
                 .toList();
+    }
+
+    @Override
+    public List<RatingEventFullDto> getEventsSorted(RatingState sortBy, Integer from, Integer size) {
+        return switch (sortBy) {
+            case LIKES -> getEventsSortedByLikes(from, size);
+            case DISLIKES -> getEventsSortedByDislikes(from, size);
+            default -> getEventsSortedByRating(from, size);
+        };
     }
 }
