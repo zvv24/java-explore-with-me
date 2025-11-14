@@ -16,6 +16,9 @@ import ru.practicum.event.repository.EventRepository;
 import ru.practicum.exception.ConflictException;
 import ru.practicum.exception.NotFoundException;
 import ru.practicum.exception.ValidationException;
+import ru.practicum.rating.dto.EventRatingDto;
+import ru.practicum.rating.model.Rating;
+import ru.practicum.rating.repository.RatingRepository;
 import ru.practicum.user.model.User;
 import ru.practicum.user.repository.UserRepository;
 
@@ -35,6 +38,7 @@ public class EventServiceImpl implements EventService {
     private final CategoryRepository categoryRepository;
     private final EventMapper eventMapper;
     private final StateClient stateClient;
+    private final RatingRepository ratingRepository;
 
     @Override
     @Transactional
@@ -174,11 +178,28 @@ public class EventServiceImpl implements EventService {
                 .getContent();
 
         Map<Long, Long> viewsMap = getEventsViews(events);
-        events.forEach(event -> event.setViews(viewsMap.getOrDefault(event.getId(), 0L)));
+        Map<Long, EventRatingDto> ratingsMap = getEventsRatings(events);
 
-        return events.stream()
-                .map(eventMapper::toShortDto)
-                .toList();
+        List<EventShortDto> result = new ArrayList<>();
+        for (Event event : events) {
+            EventShortDto shortDto = eventMapper.toShortDto(event);
+            shortDto.setViews(viewsMap.getOrDefault(event.getId(), 0L));
+
+            EventRatingDto rating = ratingsMap.get(event.getId());
+            if (rating != null) {
+                shortDto.setLikes(rating.getLikes());
+                shortDto.setDislikes(rating.getDislikes());
+                shortDto.setRating(rating.getRating());
+            } else {
+                shortDto.setLikes(0L);
+                shortDto.setDislikes(0L);
+                shortDto.setRating(0L);
+            }
+
+            result.add(shortDto);
+        }
+
+        return result;
     }
 
     @Override
@@ -209,11 +230,24 @@ public class EventServiceImpl implements EventService {
             List<Event> paginatedEvents = filteredEvents.subList(startIndex, endIndex);
 
             Map<Long, Long> viewsMap = getEventsViews(paginatedEvents);
+            Map<Long, EventRatingDto> ratingsMap = getEventsRatings(paginatedEvents);
 
             List<EventFullDto> result = new ArrayList<>();
             for (Event event : paginatedEvents) {
                 EventFullDto fullDto = eventMapper.toFullDto(event);
                 fullDto.setViews(viewsMap.getOrDefault(event.getId(), 0L));
+
+                EventRatingDto rating = ratingsMap.get(event.getId());
+                if (rating != null) {
+                    fullDto.setLikes(rating.getLikes());
+                    fullDto.setDislikes(rating.getDislikes());
+                    fullDto.setRating(rating.getRating());
+                } else {
+                    fullDto.setLikes(0L);
+                    fullDto.setDislikes(0L);
+                    fullDto.setRating(0L);
+                }
+
                 result.add(fullDto);
             }
 
@@ -259,11 +293,24 @@ public class EventServiceImpl implements EventService {
             List<Event> paginatedEvents = filteredEvents.subList(startIndex, endIndex);
 
             Map<Long, Long> viewsMap = getEventsViews(paginatedEvents);
+            Map<Long, EventRatingDto> ratingsMap = getEventsRatings(paginatedEvents);
 
             List<EventShortDto> result = new ArrayList<>();
             for (Event event : paginatedEvents) {
                 EventShortDto shortDto = eventMapper.toShortDto(event);
                 shortDto.setViews(viewsMap.getOrDefault(event.getId(), 0L));
+
+                EventRatingDto rating = ratingsMap.get(event.getId());
+                if (rating != null) {
+                    shortDto.setLikes(rating.getLikes());
+                    shortDto.setDislikes(rating.getDislikes());
+                    shortDto.setRating(rating.getRating());
+                } else {
+                    shortDto.setLikes(0L);
+                    shortDto.setDislikes(0L);
+                    shortDto.setRating(0L);
+                }
+
                 result.add(shortDto);
             }
 
@@ -337,5 +384,38 @@ public class EventServiceImpl implements EventService {
         } catch (Exception e) {
             throw new ValidationException("Неверный формат URI: " + uri);
         }
+    }
+
+    private Map<Long, EventRatingDto> getEventsRatings(List<Event> events) {
+        List<Long> eventIds = events.stream()
+                .map(Event::getId)
+                .collect(Collectors.toList());
+
+        Map<Long, Long> likesMap = ratingRepository.findByEventIdIn(eventIds)
+                .stream()
+                .filter(Rating::getIsLike)
+                .collect(Collectors.groupingBy(
+                        rating -> rating.getEvent().getId(),
+                        Collectors.counting()
+                ));
+
+        Map<Long, Long> dislikesMap = ratingRepository.findByEventIdIn(eventIds)
+                .stream()
+                .filter(rating -> !rating.getIsLike())
+                .collect(Collectors.groupingBy(
+                        rating -> rating.getEvent().getId(),
+                        Collectors.counting()
+                ));
+
+        return eventIds.stream()
+                .collect(Collectors.toMap(
+                        eventId -> eventId,
+                        eventId -> {
+                            Long likes = likesMap.getOrDefault(eventId, 0L);
+                            Long dislikes = dislikesMap.getOrDefault(eventId, 0L);
+                            Long rating = likes - dislikes;
+                            return new EventRatingDto(eventId, "", likes, dislikes, rating);
+                        }
+                ));
     }
 }

@@ -1,6 +1,5 @@
 package ru.practicum.event.mapper;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.practicum.category.mapper.CategoryMapper;
 import ru.practicum.category.model.Category;
@@ -14,9 +13,7 @@ import ru.practicum.user.model.User;
 import java.time.LocalDateTime;
 
 @Component
-@RequiredArgsConstructor
 public class EventMapper {
-
     public Event toEntity(NewEventDto newEventDto, User user, Category category) {
         Event event = new Event();
         event.setAnnotation(newEventDto.getAnnotation());
@@ -59,7 +56,10 @@ public class EventMapper {
                 event.getRequestModeration() != null ? event.getRequestModeration() : true,
                 event.getState() != null ? event.getState().name() : "PENDING",
                 event.getTitle(),
-                event.getViews() != null ? event.getViews() : 0L
+                event.getViews() != null ? event.getViews() : 0L,
+                0L,
+                0L,
+                0L
         );
     }
 
@@ -73,7 +73,10 @@ public class EventMapper {
                 UserMapper.toShortDto(event.getInitiator()),
                 event.getPaid() != null ? event.getPaid() : false,
                 event.getTitle(),
-                event.getViews() != null ? event.getViews() : 0L
+                event.getViews() != null ? event.getViews() : 0L,
+                0L,
+                0L,
+                0L
         );
     }
 

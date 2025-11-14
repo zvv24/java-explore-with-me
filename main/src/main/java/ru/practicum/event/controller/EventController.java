@@ -10,6 +10,10 @@ import ru.practicum.client.StateClient;
 import ru.practicum.event.dto.*;
 import ru.practicum.event.model.EventState;
 import ru.practicum.event.service.EventService;
+import ru.practicum.rating.dto.EventRatingDto;
+import ru.practicum.rating.dto.RatingEventFullDto;
+import ru.practicum.rating.model.RatingState;
+import ru.practicum.rating.service.RatingService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,6 +23,7 @@ import java.util.List;
 public class EventController {
     private final EventService eventService;
     private final StateClient stateClient;
+    private final RatingService ratingService;
 
     @PostMapping("/users/{userId}/events")
     @ResponseStatus(HttpStatus.CREATED)
@@ -106,5 +111,21 @@ public class EventController {
                                        HttpServletRequest request) {
         stateClient.hit(request);
         return eventService.getPublicEvent(eventId);
+    }
+
+    @GetMapping("/events/{eventId}/rating")
+    public EventRatingDto getEventRating(@PathVariable Long eventId,
+                                         HttpServletRequest request) {
+        stateClient.hit(request);
+        return ratingService.getEventRating(eventId);
+    }
+
+    @GetMapping("/events/rating/sorted")
+    public List<RatingEventFullDto> getEventsSorted(
+            @RequestParam(defaultValue = "RATING") RatingState sortBy,
+            @RequestParam(defaultValue = "0") Integer from,
+            @RequestParam(defaultValue = "10") Integer size) {
+
+        return ratingService.getEventsSorted(sortBy, from, size);
     }
 }
