@@ -88,62 +88,22 @@ public class RatingServiceImpl implements RatingService {
     @Override
     public List<RatingEventFullDto> getEventsSortedByRating(Integer from, Integer size) {
         Pageable pageable = PageRequest.of(from / size, size);
-
-        List<Event> events = eventRepository.findAllPublishedWithRatingsSortedByRating(pageable);
-
-        return events.stream()
-                .map(event -> {
-                    Long likes = ratingRepository.countByEventIdAndIsLikeTrue(event.getId());
-                    Long dislikes = ratingRepository.countByEventIdAndIsLikeFalse(event.getId());
-                    Long rating = likes - dislikes;
-
-                    EventRatingDto eventRating = new EventRatingDto(
-                            event.getId(), event.getTitle(), likes, dislikes, rating
-                    );
-                    return RatingMapper.toRatingEventDto(event, eventRating);
-                })
-                .toList();
+        List<Object[]> results = eventRepository.findEventsWithRatings("RATING", pageable);
+        return mapToRatingEventFullDto(results);
     }
 
     @Override
     public List<RatingEventFullDto> getEventsSortedByLikes(Integer from, Integer size) {
         Pageable pageable = PageRequest.of(from / size, size);
-
-        List<Event> events = eventRepository.findAllPublishedWithRatingsSortedByLikes(pageable);
-
-        return events.stream()
-                .map(event -> {
-                    Long likes = ratingRepository.countByEventIdAndIsLikeTrue(event.getId());
-                    Long dislikes = ratingRepository.countByEventIdAndIsLikeFalse(event.getId());
-                    Long rating = likes - dislikes;
-
-                    EventRatingDto eventRating = new EventRatingDto(
-                            event.getId(), event.getTitle(), likes, dislikes, rating
-                    );
-                    return RatingMapper.toRatingEventDto(event, eventRating);
-                })
-                .toList();
+        List<Object[]> results = eventRepository.findEventsWithRatings("LIKES", pageable);
+        return mapToRatingEventFullDto(results);
     }
 
     @Override
     public List<RatingEventFullDto> getEventsSortedByDislikes(Integer from, Integer size) {
         Pageable pageable = PageRequest.of(from / size, size);
-
-        List<Event> events = eventRepository.findAllPublishedWithRatingsSortedByDislikes(pageable);
-
-        return events.stream()
-                .map(event -> {
-                    Long likes = ratingRepository.countByEventIdAndIsLikeTrue(event.getId());
-                    Long dislikes = ratingRepository.countByEventIdAndIsLikeFalse(event.getId());
-                    Long rating = likes - dislikes;
-
-                    EventRatingDto eventRating = new EventRatingDto(
-                            event.getId(), event.getTitle(), likes, dislikes, rating
-                    );
-                    return RatingMapper.toRatingEventDto(event, eventRating);
-                })
-                .sorted((e1, e2) -> Long.compare(e2.getDislikes(), e1.getDislikes()))
-                .toList();
+        List<Object[]> results = eventRepository.findEventsWithRatings("DISLIKES", pageable);
+        return mapToRatingEventFullDto(results);
     }
 
     @Override
@@ -153,5 +113,21 @@ public class RatingServiceImpl implements RatingService {
             case DISLIKES -> getEventsSortedByDislikes(from, size);
             default -> getEventsSortedByRating(from, size);
         };
+    }
+
+    private List<RatingEventFullDto> mapToRatingEventFullDto(List<Object[]> results) {
+        return results.stream()
+                .map(result -> {
+                    Event event = (Event) result[0];
+                    Long likes = (Long) result[1];
+                    Long dislikes = (Long) result[2];
+                    Long rating = likes - dislikes;
+
+                    EventRatingDto eventRating = new EventRatingDto(
+                            event.getId(), event.getTitle(), likes, dislikes, rating
+                    );
+                    return RatingMapper.toRatingEventDto(event, eventRating);
+                })
+                .toList();
     }
 }

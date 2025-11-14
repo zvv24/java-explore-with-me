@@ -1,6 +1,5 @@
 package ru.practicum.event.mapper;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.practicum.category.mapper.CategoryMapper;
 import ru.practicum.category.model.Category;
@@ -8,17 +7,13 @@ import ru.practicum.event.dto.*;
 import ru.practicum.event.model.Event;
 import ru.practicum.event.model.EventState;
 import ru.practicum.event.model.Location;
-import ru.practicum.rating.repository.RatingRepository;
 import ru.practicum.user.mapper.UserMapper;
 import ru.practicum.user.model.User;
 
 import java.time.LocalDateTime;
 
 @Component
-@RequiredArgsConstructor
 public class EventMapper {
-    private final RatingRepository ratingRepository;
-
     public Event toEntity(NewEventDto newEventDto, User user, Category category) {
         Event event = new Event();
         event.setAnnotation(newEventDto.getAnnotation());
@@ -45,10 +40,6 @@ public class EventMapper {
     public EventFullDto toFullDto(Event event) {
         Location location = new Location(event.getLat(), event.getLon());
 
-        Long likes = ratingRepository.countByEventIdAndIsLikeTrue(event.getId());
-        Long dislikes = ratingRepository.countByEventIdAndIsLikeFalse(event.getId());
-        Long rating = likes - dislikes;
-
         return new EventFullDto(
                 event.getId(),
                 event.getAnnotation(),
@@ -66,17 +57,13 @@ public class EventMapper {
                 event.getState() != null ? event.getState().name() : "PENDING",
                 event.getTitle(),
                 event.getViews() != null ? event.getViews() : 0L,
-                likes,
-                dislikes,
-                rating
+                0L,
+                0L,
+                0L
         );
     }
 
     public EventShortDto toShortDto(Event event) {
-        Long likes = ratingRepository.countByEventIdAndIsLikeTrue(event.getId());
-        Long dislikes = ratingRepository.countByEventIdAndIsLikeFalse(event.getId());
-        Long rating = likes - dislikes;
-
         return new EventShortDto(
                 event.getId(),
                 event.getAnnotation(),
@@ -87,9 +74,9 @@ public class EventMapper {
                 event.getPaid() != null ? event.getPaid() : false,
                 event.getTitle(),
                 event.getViews() != null ? event.getViews() : 0L,
-                likes,
-                dislikes,
-                rating
+                0L,
+                0L,
+                0L
         );
     }
 
